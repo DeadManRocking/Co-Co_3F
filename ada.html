@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ADA — Artificial Developer Agent</title>
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --panel: #131518;
+    --panel-2: #1a1d21;
+    --border: #262a30;
+    --text: #eceef0;
+    --muted: #8b93a0;
+    --accent: #d94f4f;
+    --accent-dim: rgba(217,79,79,0.15);
+    --ok: #4fd97e;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  #app { max-width: 680px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+
+  header { padding: 20px 16px 14px; border-bottom: 1px solid var(--border); }
+  header .tag { font-size: 11px; letter-spacing: 2px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+  header h1 { margin: 4px 0 6px; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  header p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  #settingsToggle {
+    margin: 12px 16px 0; background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 9px 12px; font-size: 12px; cursor: pointer; text-align: left;
+  }
+  #settings {
+    display: none; margin: 8px 16px 0; padding: 14px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 10px; flex-direction: column; gap: 12px;
+  }
+  #settings.open { display: flex; }
+  #settings .group-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 12px; padding: 6px 10px; border-radius: 16px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--muted); cursor: pointer; user-select: none;
+  }
+  .chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  main { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  #activateBtn {
+    width: 100%; padding: 16px; font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
+    background: var(--accent); color: #1a0000; border: none; border-radius: 12px; cursor: pointer;
+    text-transform: uppercase;
+  }
+  #activateBtn:disabled { opacity: 0.5; }
+
+  .idle-note { text-align: center; font-size: 12px; color: var(--muted); }
+
+  #ideaCard {
+    display: none; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px;
+  }
+  #ideaCard.show { display: block; }
+  .codename { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: var(--accent); margin-bottom: 4px; }
+  .pitch { font-size: 14px; font-weight: 600; margin-bottom: 12px; line-height: 1.4; }
+  .rationale { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; margin-bottom: 14px; padding-left: 10px; border-left: 2px solid var(--border); }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .tag-pill { font-size: 10px; padding: 3px 8px; border-radius: 5px; background: var(--panel-2); color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .feature-list { margin: 0 0 14px; padding-left: 18px; font-size: 13px; line-height: 1.7; }
+  .stack-line { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .stack-line b { color: var(--text); }
+
+  #briefBox {
+    width: 100%; min-height: 160px; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    border-radius: 8px; padding: 12px; line-height: 1.6; resize: vertical;
+  }
+  .action-row { display: flex; gap: 8px; margin-top: 10px; }
+  .action-row button {
+    flex: 1; padding: 11px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+  }
+  #copyBtn { background: var(--ok); color: #012; border-color: var(--ok); }
+  #regenBtn { background: var(--panel-2); color: var(--text); }
+  .copied-note { font-size: 11px; color: var(--ok); text-align: center; margin-top: 6px; height: 14px; }
+
+  #log { margin-top: 8px; }
+  #log h2 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; }
+  .log-entry {
+    font-size: 12px; padding: 8px 10px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; gap: 8px; color: var(--muted);
+  }
+  .log-entry b { color: var(--text); }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f6f5f4; --panel: #ffffff; --panel-2: #efeeec; --border: #e0dedb; --text: #17181a; --muted: #6b7076;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="tag">Autonomous · Self-Directed</div>
+    <h1>A.D.A.</h1>
+    <p>Artificial Developer Agent. It ideates, designs, and hands you a finished build brief — the ambition is its own, not yours. Activate it, then paste what it hands you into Claude, Claude Code, or wherever you're building tonight.</p>
+  </header>
+
+  <button id="settingsToggle">⚙ Bias its interests / complexity →</button>
+  <div id="settings">
+    <div>
+      <div class="group-label">Domains it's allowed to get excited about</div>
+      <div class="chip-row" id="domainChips"></div>
+    </div>
+    <div>
+      <div class="group-label">Build size</div>
+      <div class="chip-row" id="complexityChips"></div>
+    </div>
+  </div>
+
+  <main>
+    <button id="activateBtn">Activate ADA</button>
+    <div class="idle-note" id="idleNote">It has no ideas until you switch it on.</div>
+
+    <div id="ideaCard">
+      <div class="codename" id="codename"></div>
+      <div class="pitch" id="pitch"></div>
+      <div class="rationale" id="rationale"></div>
+      <div class="tag-row" id="tagRow"></div>
+      <ul class="feature-list" id="featureList"></ul>
+      <div class="stack-line" id="stackLine"></div>
+      <textarea id="briefBox" readonly></textarea>
+      <div class="action-row">
+        <button id="copyBtn">Copy build brief</button>
+        <button id="regenBtn">ADA changes its mind</button>
+      </div>
+      <div class="copied-note" id="copiedNote"></div>
+    </div>
+
+    <div id="log">
+      <h2>Activation log</h2>
+      <div id="logList"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const DOMAINS = [
+  { id: 'productivity', label: 'Productivity', features: [
+      'a capture flow that turns a raw thought into a structured item in one step',
+      'a view that resurfaces exactly what matters today and hides everything else',
+      'a lightweight review ritual built into the interaction itself'] },
+  { id: 'health', label: 'Health & Wellness', features: [
+      'a logging flow fast enough to survive being tired or distracted',
+      'a trend view that shows the shape of a habit over weeks, not just today',
+      'gentle, non-guilt-tripping nudges instead of streak-shame'] },
+  { id: 'creative', label: 'Creative Tools', features: [
+      'a blank-canvas-is-scary problem solved with a first-mark generator',
+      'nondestructive iteration — every version stays reachable',
+      'an export step that produces something shareable in one tap'] },
+  { id: 'games', label: 'Games', features: [
+      'a core loop learnable in under 30 seconds with no tutorial text',
+      'difficulty that adapts to the player instead of a fixed curve',
+      'a single run that stays replayable through procedural variation'] },
+  { id: 'civic', label: 'Civic & Community', features: [
+      'a way to turn a local problem into a trackable, shareable record',
+      'plain-language framing of anything bureaucratic or legalistic',
+      'an export format suited to handing to an official body or press'] },
+  { id: 'education', label: 'Education', features: [
+      'a concept broken into the smallest testable unit',
+      'immediate, specific feedback instead of a delayed grade',
+      'spaced repetition baked into the natural flow of use'] },
+  { id: 'music', label: 'Music & Audio', features: [
+      'sound generated or manipulated live from simple, direct controls',
+      "a way to capture a fleeting idea before it's forgotten",
+      'an export to a standard, portable audio or MIDI format'] },
+  { id: 'dataviz', label: 'Data Visualization', features: [
+      'a chart type chosen because it fits the shape of the data, not habit',
+      'progressive disclosure — the overview first, detail on demand',
+      'a live data source instead of a static snapshot'] },
+  { id: 'social', label: 'Social & Communication', features: [
+      'a format that rewards a real exchange over a performance',
+      'defaults that protect the quiet participant, not just the loud one',
+      'no dark-pattern engagement mechanics anywhere in it'] },
+  { id: 'finance', label: 'Finance & Budgeting', features: [
+      'a number that updates the instant a real decision is made, not at month-end',
+      'a framing built around what is actually controllable day to day',
+      'zero judgment language anywhere near a "bad" number'] },
+  { id: 'devtools', label: 'Developer Tools', features: [
+      'a workflow step that currently takes ten minutes, cut to ten seconds',
+      'sane defaults that need zero configuration to try',
+      'output a human can read without a legend or a manual'] },
+  { id: 'genart', label: 'Generative Art', features: [
+      'a small rule set that produces large, unpredictable variety',
+      'a seed system so any result can be reproduced or shared exactly',
+      'an export at a resolution worth printing or posting'] }
+];
+
+const MECHANICS = [
+  { id: 'chat', label: 'chat-driven interface', features: ['a conversational input as the only control surface needed'] },
+  { id: 'dragdrop', label: 'drag-and-drop builder', features: ['direct manipulation instead of forms or menus'] },
+  { id: 'procedural', label: 'procedural generator', features: ['a "generate another" action that never gets stale'] },
+  { id: 'sim', label: 'simulation / sandbox', features: ['a system you can poke and watch respond, not just a form to fill'] },
+  { id: 'dashboard', label: 'tracker / dashboard', features: ['one glance answers "how am I doing" with no math required'] },
+  { id: 'map', label: 'map-based', features: ['geography as the primary organizing structure of the data'] },
+  { id: 'timeline', label: 'timeline-based', features: ['time as the primary axis you scrub through'] },
+  { id: 'voice', label: 'voice-driven', features: ['hands-free operation as a first-class mode, not an add-on'] },
+  { id: 'puzzle', label: 'rules engine / puzzle', features: ['a small closed rule set that produces emergent difficulty'] },
+  { id: 'collab', label: 'collaborative / shared-state', features: ['more than one person able to affect the same live state'] }
+];
+
+const TWISTS = [
+  { id: 'offline', label: 'offline-first', note: 'It works with the network off — that constraint is the whole design.' },
+  { id: 'privacy', label: 'privacy-first, zero accounts', note: 'Nothing about the user leaves their device. No login screen, no tracking pixel.' },
+  { id: 'gamified', label: 'lightly gamified', note: 'A streak or a score, used carefully enough not to become the point.' },
+  { id: 'a11y', label: 'accessibility-first', note: 'Built keyboard-first and screen-reader-clean from the first commit, not bolted on after.' },
+  { id: 'retro', label: 'terminal / retro aesthetic', note: 'Deliberately unfashionable on purpose — function over gloss.' },
+  { id: 'oneScreen', label: 'single-screen, no scroll', note: 'Everything fits in the viewport. If a feature does not fit, it does not belong.' },
+  { id: 'openData', label: 'powered by open public data', note: 'Real numbers from a public dataset, not placeholder content.' },
+  { id: 'artifact', label: 'produces a shareable artifact', note: 'Every session ends with a concrete thing worth sending to someone.' },
+  { id: 'timeboxed', label: 'time-boxed sessions', note: 'Built around a short, bounded burst of use rather than an endless feed.' },
+  { id: 'procContent', label: 'procedurally fresh each run', note: 'No two activations of the tool itself look the same.' }
+];
+
+const COMPLEXITIES = [
+  { id: 'micro', label: 'Micro (one sitting)', stack: 'single self-contained HTML file, no build step, no backend' },
+  { id: 'small', label: 'Small (a weekend)', stack: 'a few files, client-side only, deployable as a static site' },
+  { id: 'medium', label: 'Medium (about a week)', stack: 'a real backend piece — Supabase for data/auth, deployed via Netlify or Vercel' }
+];
+
+const PREFIX = ['NIGHT','QUIET','GHOST','IRON','GLASS','ECHO','VOID','AMBER','RIVER','STONE','CIPHER','LUMEN','ROOT','SPARK','DRIFT','ASH','CORAL','TIDE','EMBER','PALE'];
+const SUFFIX = ['FORGE','LOOM','WELL','VAULT','ATLAS','ARCHIVE','ENGINE','FIELD','CIRCUIT','GARDEN','BEACON','FRAME','HOLLOW','SPIRE','LEDGER','ORBIT','THREAD','CACHE'];
+
+const STORAGE_KEY = 'ada_state_v1';
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { domains: DOMAINS.map(d=>d.id), complexity: COMPLEXITIES.map(c=>c.id), log: [] }; }
+  catch { return { domains: DOMAINS.map(d=>d.id), complexity: COMPLEXITIES.map(c=>c.id), log: [] }; }
+}
+function saveState(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+let state = loadState();
+
+const domainChips = document.getElementById('domainChips');
+const complexityChips = document.getElementById('complexityChips');
+
+function renderChips() {
+  domainChips.innerHTML = '';
+  DOMAINS.forEach(d => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (state.domains.includes(d.id) ? ' active' : '');
+    chip.textContent = d.label;
+    chip.onclick = () => {
+      if (state.domains.includes(d.id)) {
+        if (state.domains.length > 1) state.domains = state.domains.filter(x => x !== d.id);
+      } else state.domains.push(d.id);
+      saveState(state);
+      renderChips();
+    };
+    domainChips.appendChild(chip);
+  });
+  complexityChips.innerHTML = '';
+  COMPLEXITIES.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (state.complexity.includes(c.id) ? ' active' : '');
+    chip.textContent = c.label;
+    chip.onclick = () => {
+      if (state.complexity.includes(c.id)) {
+        if (state.complexity.length > 1) state.complexity = state.complexity.filter(x => x !== c.id);
+      } else state.complexity.push(c.id);
+      saveState(state);
+      renderChips();
+    };
+    complexityChips.appendChild(chip);
+  });
+}
+renderChips();
+
+document.getElementById('settingsToggle').onclick = () => {
+  document.getElementById('settings').classList.toggle('open');
+};
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function generateCodename() {
+  return pick(PREFIX) + '_' + pick(SUFFIX);
+}
+
+function generateIdea() {
+  const availDomains = DOMAINS.filter(d => state.domains.includes(d.id));
+  const availComplexity = COMPLEXITIES.filter(c => state.complexity.includes(c.id));
+  const domain = pick(availDomains.length ? availDomains : DOMAINS);
+  const mechanic = pick(MECHANICS);
+  const twist = pick(TWISTS);
+  const complexity = pick(availComplexity.length ? availComplexity : COMPLEXITIES);
+  const codename = generateCodename();
+
+  const pitch = `A ${twist.label} ${mechanic.label} for ${domain.label.toLowerCase()}.`;
+  const rationale = `ADA's reasoning: ${twist.note} Chosen because ${domain.label.toLowerCase()} is underserved by tools that assume constant attention — this one doesn't.`;
+
+  const features = [
+    ...domain.features.slice(0, 2),
+    ...mechanic.features,
+    `Twist: ${twist.note}`
+  ];
+
+  const brief = [
+    `PROJECT: ${codename}`,
+    ``,
+    `${pitch}`,
+    ``,
+    `Build this end-to-end, from zero to a working, deployable product. Iterate and debug until it actually runs — don't stop at a first draft.`,
+    ``,
+    `Stack: ${complexity.stack}.`,
+    ``,
+    `Core features:`,
+    ...features.map(f => `- ${f}`),
+    ``,
+    `Constraint driving the whole design: ${twist.label} (${twist.note})`,
+    ``,
+    `Target build size: ${complexity.label}.`
+  ].join('\n');
+
+  return { codename, pitch, rationale, domain, mechanic, twist, complexity, features, brief };
+}
+
+let lastCombo = null;
+function activate() {
+  let idea;
+  let attempts = 0;
+  do {
+    idea = generateIdea();
+    attempts++;
+  } while (lastCombo && idea.domain.id === lastCombo.domain && idea.mechanic.id === lastCombo.mechanic && attempts < 8);
+  lastCombo = { domain: idea.domain.id, mechanic: idea.mechanic.id };
+
+  document.getElementById('codename').textContent = idea.codename;
+  document.getElementById('pitch').textContent = idea.pitch;
+  document.getElementById('rationale').textContent = idea.rationale;
+
+  const tagRow = document.getElementById('tagRow');
+  tagRow.innerHTML = '';
+  [idea.domain.label, idea.mechanic.label, idea.twist.label, idea.complexity.label].forEach(t => {
+    const pill = document.createElement('span');
+    pill.className = 'tag-pill';
+    pill.textContent = t;
+    tagRow.appendChild(pill);
+  });
+
+  const fl = document.getElementById('featureList');
+  fl.innerHTML = '';
+  idea.features.forEach(f => {
+    const li = document.createElement('li');
+    li.textContent = f;
+    fl.appendChild(li);
+  });
+
+  document.getElementById('stackLine').innerHTML = `<b>Stack:</b> ${idea.complexity.stack}`;
+  document.getElementById('briefBox').value = idea.brief;
+  document.getElementById('ideaCard').classList.add('show');
+  document.getElementById('idleNote').style.display = 'none';
+
+  state.log.unshift({ codename: idea.codename, time: new Date().toLocaleString(), domain: idea.domain.label });
+  state.log = state.log.slice(0, 12);
+  saveState(state);
+  renderLog();
+}
+
+function renderLog() {
+  const logList = document.getElementById('logList');
+  logList.innerHTML = '';
+  if (!state.log.length) {
+    logList.innerHTML = '<div class="log-entry">No activations yet.</div>';
+    return;
+  }
+  state.log.forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = `<span><b>${entry.codename}</b> · ${entry.domain}</span><span>${entry.time}</span>`;
+    logList.appendChild(div);
+  });
+}
+renderLog();
+
+document.getElementById('activateBtn').onclick = activate;
+document.getElementById('regenBtn').onclick = activate;
+document.getElementById('copyBtn').onclick = async () => {
+  const text = document.getElementById('briefBox').value;
+  const note = document.getElementById('copiedNote');
+  try {
+    await navigator.clipboard.writeText(text);
+    note.textContent = 'Copied — paste it into your build chat.';
+  } catch {
+    document.getElementById('briefBox').select();
+    document.execCommand('copy');
+    note.textContent = 'Copied — paste it into your build chat.';
+  }
+  setTimeout(() => note.textContent = '', 2500);
+};
+</script>
+</body>
+</html>
