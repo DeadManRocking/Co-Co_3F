@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Co-Co_3F Builder</title>
+<style>
+  :root { --bg:#0b0d10; --panel:#14171c; --p2:#1b1f26; --bd:#262b33; --tx:#e8eaed; --mu:#9aa2ad; --ac:#5b9dff; --ok:#2ecc71; --er:#ff6b6b;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--tx); }
+  #app { display:flex; flex-direction:column; height:100vh; height:100dvh; }
+  header { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--panel); border-bottom:1px solid var(--bd); }
+  header h1 { font-size:14px; margin:0; flex:1; }
+  button { font:inherit; }
+  .btn { background:var(--p2); color:var(--tx); border:1px solid var(--bd); border-radius:8px; padding:7px 10px; font-size:12px; cursor:pointer; }
+  .btn.pri { background:var(--ac); color:#06111f; border-color:var(--ac); font-weight:700; }
+  .tabs { display:flex; background:var(--panel); border-bottom:1px solid var(--bd); }
+  .tab { flex:1; padding:10px; text-align:center; font-size:13px; color:var(--mu); cursor:pointer; border-bottom:2px solid transparent; }
+  .tab.on { color:var(--tx); border-bottom-color:var(--ac); }
+  .pane { display:none; flex:1; min-height:0; }
+  .pane.on { display:flex; flex-direction:column; }
+  #chatLog { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .m { max-width:92%; padding:9px 12px; border-radius:12px; font-size:14px; line-height:1.45; white-space:pre-wrap; }
+  .m.u { align-self:flex-end; background:var(--ac); color:#06111f; }
+  .m.a { align-self:flex-start; background:var(--panel); border:1px solid var(--bd); }
+  .m.e { align-self:flex-start; background:#2a1517; border:1px solid var(--er); color:var(--er); }
+  #inbar { display:flex; gap:8px; padding:10px; background:var(--panel); border-top:1px solid var(--bd); }
+  #inbar textarea { flex:1; background:var(--bg); color:var(--tx); border:1px solid var(--bd); border-radius:12px; padding:10px; font:inherit; font-size:14px; resize:none; height:64px; }
+  #prev { flex:1; width:100%; border:0; background:#fff; }
+  #code { flex:1; width:100%; background:var(--bg); color:var(--tx); border:0; padding:12px; font-family:ui-monospace,Menlo,monospace; font-size:12px; resize:none; }
+  .bar { display:flex; flex-wrap:wrap; gap:6px; padding:8px 10px; background:var(--panel); border-bottom:1px solid var(--bd); }
+  .set { padding:14px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+  .set label { font-size:12px; color:var(--mu); display:block; margin-bottom:4px; }
+  .set input,.set select { width:100%; background:var(--bg); color:var(--tx); border:1px solid var(--bd); border-radius:8px; padding:10px; font-size:14px; }
+  .set .h { font-size:11px; color:var(--mu); line-height:1.5; }
+  .set h3 { margin:8px 0 0; font-size:13px; }
+  .set a { color:var(--ac); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Co-Co_3F Builder</h1>
+    <button class="btn" id="newBtn">New</button>
+  </header>
+  <div class="tabs">
+    <div class="tab on" data-p="chat">Build</div>
+    <div class="tab" data-p="view">Preview</div>
+    <div class="tab" data-p="src">Code</div>
+    <div class="tab" data-p="set">Setup</div>
+  </div>
+
+  <div class="pane on" id="p-chat">
+    <div id="chatLog"><div class="m a">Describe the app you want. I will build it, show it in Preview, and you can keep asking for changes. Set your free key in Setup first.</div></div>
+    <div id="inbar">
+      <textarea id="prompt" placeholder="Build me a..."></textarea>
+      <button class="btn pri" id="go">Build</button>
+    </div>
+  </div>
+
+  <div class="pane" id="p-view">
+    <div class="bar">
+      <button class="btn" id="popBtn">Open full screen</button>
+      <button class="btn" id="undoBtn">Undo last change</button>
+      <span id="verLbl" style="font-size:12px;color:var(--mu);align-self:center"></span>
+    </div>
+    <iframe id="prev" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+  </div>
+
+  <div class="pane" id="p-src">
+    <div class="bar">
+      <button class="btn" id="copyBtn">Copy code</button>
+      <button class="btn" id="dlBtn">Download .html</button>
+      <button class="btn pri" id="pubBtn">Publish to GitHub</button>
+      <span id="pubMsg" style="font-size:12px;color:var(--mu);align-self:center"></span>
+    </div>
+    <textarea id="code" spellcheck="false"></textarea>
+  </div>
+
+  <div class="pane" id="p-set">
+    <div class="set">
+      <h3>1. The AI that writes the code</h3>
+      <div><label>Provider</label>
+        <select id="prov">
+          <option value="gemini">Google Gemini (free key, no card)</option>
+          <option value="openrouter">OpenRouter (free models available)</option>
+          <option value="anthropic">Anthropic Claude (paid API key)</option>
+        </select></div>
+      <div><label>API key</label><input id="key" type="password" placeholder="paste key"></div>
+      <div><label>Model name (editable)</label><input id="model"></div>
+      <div class="h">Gemini key: aistudio.google.com, sign in, Get API key. Free tier has rate limits, so wait a minute if it says quota. Free-tier prompts may be used by Google to improve its products, so keep private or legal material out of prompts.</div>
+      <h3>2. Publish to GitHub (optional)</h3>
+      <div><label>GitHub username</label><input id="ghUser" placeholder="DeadManRocking"></div>
+      <div><label>Repository</label><input id="ghRepo" placeholder="Co-Co_3F"></div>
+      <div><label>File name</label><input id="ghFile" placeholder="myapp.html"></div>
+      <div><label>GitHub token</label><input id="ghTok" type="password" placeholder="fine-grained token"></div>
+      <div class="h">Token: GitHub, Settings, Developer settings, Fine-grained tokens. Give it access to only this repo, permission Contents: Read and write. Only save keys on your own phone, never on a public PC.</div>
+      <button class="btn pri" id="saveSet">Save setup</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var DEFAULT_MODEL = { gemini: "gemini-2.5-flash", openrouter: "deepseek/deepseek-chat-v3.1:free", anthropic: "claude-sonnet-5-5" };
+var SYSTEM = "You are an expert app builder. The user describes an app. Reply with a short one or two sentence note, then the COMPLETE app as ONE self-contained HTML file (inline CSS and JS, no build step, external scripts only from cdnjs.cloudflare.com) inside a single html code fence. Make it mobile-first, clean, and fully working. On every follow-up request, return the COMPLETE updated file again, never a partial diff. Never use localStorage keys that contain personal data. Never include API keys.";
+var S = JSON.parse(localStorage.getItem("cc3f_set") || "{}");
+var history = [];
+var versions = [];
+
+function loadSet() {
+  $("prov").value = S.prov || "gemini";
+  $("key").value = S.key || "";
+  $("model").value = S.model || DEFAULT_MODEL[$("prov").value];
+  $("ghUser").value = S.ghUser || "";
+  $("ghRepo").value = S.ghRepo || "";
+  $("ghFile").value = S.ghFile || "";
+  $("ghTok").value = S.ghTok || "";
+}
+loadSet();
+$("prov").onchange = function () { $("model").value = DEFAULT_MODEL[$("prov").value]; };
+$("saveSet").onclick = function () {
+  S = { prov: $("prov").value, key: $("key").value.trim(), model: $("model").value.trim(),
+    ghUser: $("ghUser").value.trim(), ghRepo: $("ghRepo").value.trim(), ghFile: $("ghFile").value.trim(), ghTok: $("ghTok").value.trim() };
+  localStorage.setItem("cc3f_set", JSON.stringify(S));
+  say("a", "Setup saved.");
+  show("chat");
+};
+
+var tabs = document.querySelectorAll(".tab");
+function show(p) {
+  tabs.forEach(function (t) { t.classList.toggle("on", t.dataset.p === p); });
+  ["chat", "view", "src", "set"].forEach(function (n) { $("p-" + n).classList.toggle("on", n === p); });
+}
+tabs.forEach(function (t) { t.onclick = function () { show(t.dataset.p); }; });
+
+function say(who, text) {
+  var d = document.createElement("div");
+  d.className = "m " + who;
+  d.textContent = text;
+  $("chatLog").appendChild(d);
+  $("chatLog").scrollTop = $("chatLog").scrollHeight;
+  return d;
+}
+
+function setCode(html) {
+  versions.push(html);
+  $("code").value = html;
+  $("prev").srcdoc = html;
+  $("verLbl").textContent = "version " + versions.length;
+}
+
+function extract(text) {
+  var m = text.match(/```html\s*([\s\S]*?)```/i);
+  if (m) return { note: text.slice(0, m.index).trim(), html: m[1].trim() };
+  var open = text.match(/```html\s*([\s\S]*)$/i);
+  if (open) return { note: text.slice(0, open.index).trim(), html: open[1].trim() };
+  var i = text.search(/<!DOCTYPE html|<html/i);
+  if (i >= 0) return { note: text.slice(0, i).trim(), html: text.slice(i).trim() };
+  return { note: text, html: "" };
+}
+
+async function callAI(msgs) {
+  var p = S.prov || "gemini", key = S.key, model = S.model || DEFAULT_MODEL[p];
+  if (!key) throw new Error("No API key yet. Open Setup and paste one.");
+  var r, j;
+  if (p === "gemini") {
+    var contents = msgs.map(function (m) { return { role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] }; });
+    r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: contents, generationConfig: { maxOutputTokens: 30000 } })
+    });
+    j = await r.json();
+    if (j.error) throw new Error(j.error.message);
+    var c = j.candidates && j.candidates[0];
+    if (!c || !c.content) throw new Error("Empty reply (blocked or over quota). Try again in a minute.");
+    return c.content.parts.map(function (x) { return x.text || ""; }).join("");
+  }
+  if (p === "openrouter") {
+    r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+      body: JSON.stringify({ model: model, messages: [{ role: "system", content: SYSTEM }].concat(msgs) })
+    });
+    j = await r.json();
+    if (j.error) throw new Error(j.error.message || "OpenRouter error");
+    return j.choices[0].message.content;
+  }
+  r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+    body: JSON.stringify({ model: model, max_tokens: 16000, system: SYSTEM, messages: msgs })
+  });
+  j = await r.json();
+  if (j.error) throw new Error(j.error.message);
+  return j.content.map(function (x) { return x.text || ""; }).join("");
+}
+
+async function build() {
+  var text = $("prompt").value.trim();
+  if (!text) return;
+  $("prompt").value = "";
+  say("u", text);
+  $("go").disabled = true;
+  var wait = say("a", "Building...");
+  var msgs = history.concat([{ role: "user", content: text }]);
+  try {
+    var out = await callAI(msgs);
+    var ex = extract(out);
+    wait.remove();
+    if (!ex.html) { say("a", out); }
+    else {
+      setCode(ex.html);
+      history = msgs.concat([{ role: "assistant", content: "```html\n" + ex.html + "\n```" }]);
+      say("a", (ex.note || "Done.") + "\n\nOpen the Preview tab.");
+      show("view");
+    }
+  } catch (e) {
+    wait.remove();
+    say("e", "Failed: " + e.message);
+  }
+  $("go").disabled = false;
+}
+$("go").onclick = build;
+
+$("undoBtn").onclick = function () {
+  if (versions.length < 2) return;
+  versions.pop();
+  var prev = versions[versions.length - 1];
+  $("code").value = prev;
+  $("prev").srcdoc = prev;
+  $("verLbl").textContent = "version " + versions.length;
+  history = history.slice(0, -2);
+};
+$("newBtn").onclick = function () {
+  history = []; versions = [];
+  $("code").value = ""; $("prev").srcdoc = ""; $("verLbl").textContent = "";
+  $("chatLog").innerHTML = "";
+  say("a", "New project. What are we building?");
+  show("chat");
+};
+$("popBtn").onclick = function () {
+  var b = new Blob([$("code").value], { type: "text/html" });
+  window.open(URL.createObjectURL(b), "_blank");
+};
+$("copyBtn").onclick = async function () {
+  try { await navigator.clipboard.writeText($("code").value); $("pubMsg").textContent = "Copied."; }
+  catch (e) { $("code").select(); document.execCommand("copy"); $("pubMsg").textContent = "Copied."; }
+};
+$("dlBtn").onclick = function () {
+  var b = new Blob([$("code").value], { type: "text/html" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = (S.ghFile || "app.html");
+  a.click();
+};
+
+function b64(str) {
+  var bytes = new TextEncoder().encode(str), bin = "";
+  bytes.forEach(function (x) { bin += String.fromCharCode(x); });
+  return btoa(bin);
+}
+$("pubBtn").onclick = async function () {
+  var html = $("code").value;
+  if (!html) { $("pubMsg").textContent = "Nothing to publish."; return; }
+  if (!S.ghUser || !S.ghRepo || !S.ghFile || !S.ghTok) { $("pubMsg").textContent = "Fill GitHub fields in Setup."; return; }
+  $("pubMsg").textContent = "Publishing...";
+  var url = "https://api.github.com/repos/" + S.ghUser + "/" + S.ghRepo + "/contents/" + S.ghFile;
+  var H = { "Authorization": "Bearer " + S.ghTok, "Accept": "application/vnd.github+json" };
+  try {
+    var sha;
+    var ex = await fetch(url, { headers: H });
+    if (ex.ok) sha = (await ex.json()).sha;
+    var body = { message: "Builder: " + S.ghFile, content: b64(html) };
+    if (sha) body.sha = sha;
+    var r = await fetch(url, { method: "PUT", headers: H, body: JSON.stringify(body) });
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.message || "GitHub error");
+    $("pubMsg").textContent = "Live in ~1 min: " + S.ghUser.toLowerCase() + ".github.io/" + S.ghRepo + "/" + S.ghFile;
+  } catch (e) { $("pubMsg").textContent = "Failed: " + e.message; }
+};
+</script>
+</body>
+</html>
